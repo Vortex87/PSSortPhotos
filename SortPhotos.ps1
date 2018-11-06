@@ -1,22 +1,28 @@
 <#
-
+.decription
+script will sort photos in order 
+YYYY\YYYY-MM-DD%event%\*.jpg
+script will take date from exif
+script trys to find folders named YYYY-MM-DD* and put photos there and in will create path if not exits
+script will find dublicates and renames files if they have the same name but are different,dublicates will be skipped
+script can remove photos after sorting
+script can require event to create new folders
 .synopsis
-sortPhotos.ps1 -searchpath C:\photos_need_to_sort\ -targetpath C:\sortedphotos\ minsize 200
+sortPhotos.ps1 -searchpath d:\photos\ -targetpath c:\testfolder\  -minsize 1000 -event_req
 searchpath path where find photos
 targetpath path where is your photos to copy
 switch -event_req will require event for every new folder to be created
-minsize -minimal size of photos to find
+minsize -minimal size of photos to find in Kb
 del -delete photos after sorting
+
+
 
 .example
 need to sort photos from card
 sortPhotos.ps1 -searchpath E:\photos_need_to_sort\ -targetpath C:\sortedphotos\ minsize 200
-Скрипт автоматически сортирует фотки в соотвествии с порядком ГГГГ\ГГГГММДД событие(если есть)\*.jpg
-Сортировка фоток только если они больше 100 кб
-Дубликаты копироваться не будут. если фотки будут не дубликатами, но с одинаковым названием, будет присвоено новое имя.
-методика сравнения файлов размер и дата
-По окончании предложит удалить отсортированные фотки.
-на каждый день будет создана отдельная папка, если папка уже есть файлы будут помещены в неё
+
+you can rename created folders but name must like YYYY-MM-DD eventname.
+
 #>
 param (
     [Parameter(Mandatory=$True)]
@@ -35,20 +41,18 @@ try {add-type -AssemblyName System.Drawing}
 catch {write-warning "System.Drawing is not installed, install .netframework 4 of higher"
 return}
 
-#$searchpath = read-host "Укажите папку где искать фотки. Поиск будет искать все фотки в папке с файлами более 200 кб."
-if (!$searchpath) {write-host "Необходимо указать папку где искать фотки";read-host 
-return}
-else {
-    if (!(test-path -path $searchpath)) {write-host "Но такой папки нету...";Read-Host
-return}}
+
+
+
+    if (!(test-path -path $searchpath)) {write-warning "no search folder found"
+    return}
  
-#$targetpath = read-host "Укажите папку куда складывать отсортированные фотки"
-if (!$targetpath) {write-host "необходим указать путь куда складывать отсортированные фотки";read-host
-return}
- else {
- if (!(test-path -path $targetpath)) {write-host "Но такой папки нету..."
- read-host
- return}}
+
+
+
+ if (!(test-path -path $targetpath)) {write-warning "no target path found"
+ 
+ return}
  #приведем введеную папку к корректному виду.
  if (!($targetpath.endswith("\"))){$targetpath = $targetpath+"\"}
 #обнулим все переменные
@@ -58,16 +62,7 @@ $photoscopied = 0 #всего фоток скопировано
 $event = $null #обнулим название события
 $photoslike = 0 #количество фотографий с одинаковой датой и именем файла но разных по размеру
 $skipped = 0 #пропущено по причине того что они уже есть в целевой папке
-<#write-host "Спрашивать событие при создании новой папки?" -ForegroundColor Green
-write-host "1. спрашивать"
-write-host "2. не спрашивать"
-$event_req = Read-host "Выберите пункт меню"
-Switch($event_req){
-1{Write-Host "При каждом новом запросе будет создан запрос события" -ForegroundColor Green}
-2{Write-Host "Событие запрашиваться не будет" -ForegroundColor Green}
-default{write-host "Событие запрашиваться не будет"}
-}
-#>
+
 
 
 if($minsize){
