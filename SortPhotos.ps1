@@ -6,18 +6,27 @@
 По окончании предложит удалить отсортированные фотки.
 на каждый день будет создана отдельная папка, если папка уже есть файлы будут помещены в неё
 #>
+param (
+    [string]$searchfolder
+    [string]$targetpath
+    [Switch]$event_req
+    [int]$minsize 
+
+
+)
+
 try {add-type -AssemblyName System.Drawing}
-catch {write-host "отсутсвует необходимый модуль"
+catch {write-warning "System.Drawing is not installed, install .netframework 4 of higher"
 return}
-finally {}
-$searchfolder = read-host "Укажите папку где искать фотки. Поиск будет искать все фотки в папке с файлами более 200 кб."
+
+#$searchfolder = read-host "Укажите папку где искать фотки. Поиск будет искать все фотки в папке с файлами более 200 кб."
 if (!$searchfolder) {write-host "Необходимо указать папку где искать фотки";read-host 
 return}
 else {
     if (!(test-path -path $searchfolder)) {write-host "Но такой папки нету...";Read-Host
 return}}
  
-$targetpath = read-host "Укажите папку куда складывать отсортированные фотки"
+#$targetpath = read-host "Укажите папку куда складывать отсортированные фотки"
 if (!$targetpath) {write-host "необходим указать путь куда складывать отсортированные фотки";read-host
 return}
  else {
@@ -33,7 +42,7 @@ $photoscopied = 0 #всего фоток скопировано
 $event = $null #обнулим название события
 $photoslike = 0 #количество фотографий с одинаковой датой и именем файла но разных по размеру
 $skipped = 0 #пропущено по причине того что они уже есть в целевой папке
-write-host "Спрашивать событие при создании новой папки?" -ForegroundColor Green
+<#write-host "Спрашивать событие при создании новой папки?" -ForegroundColor Green
 write-host "1. спрашивать"
 write-host "2. не спрашивать"
 $event_req = Read-host "Выберите пункт меню"
@@ -42,10 +51,11 @@ Switch($event_req){
 2{Write-Host "Событие запрашиваться не будет" -ForegroundColor Green}
 default{write-host "Событие запрашиваться не будет"}
 }
-
+#>
 
 #$item =get-item "g:\photos\testkw\20170729-_MG_0325_1.jpg"
-$files = Get-ChildItem -Include *.jpg -Path $searchfolder -Recurse | where {$_.Length -gt 200kb}
+
+$files = Get-ChildItem -Include *.jpg -Path $searchfolder -Recurse | where {$_.Length -gt ($minsize*1kb)}
 $photoscount = $files.Count
 $weight = $files | measure -Property length -Sum 
 $weight = [math]::round($weight.Sum/1Mb,2)
@@ -77,7 +87,7 @@ $year = $filedate.remove(4)
 #если папка такая не найдена, то будем создавать новую.
 if (!$dest){
     write-host "папки с такой датой нет, будем создавать папку"  -ForegroundColor green
-    if ($event_req -ne 2) {
+    if ($event_req) {
     $event = read-host "укажите название события $filedate"}
     if ([string]::IsNullOrWhiteSpace($event)) {$dest = $targetpath+$year+"\"+$filedate+"\"}
     else {$dest = $targetpath+$year+"\"+$filedate +" "+ $event+ "\"}
