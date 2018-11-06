@@ -30,7 +30,6 @@ param (
     [Parameter(Mandatory=$True)]
     [string]$targetpath,
     [Switch]$event_req,
-    [Parameter(Mandatory=$True)]
     [int]$minsize,
     [switch]$del
 
