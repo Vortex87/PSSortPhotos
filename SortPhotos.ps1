@@ -7,9 +7,12 @@
 на каждый день будет создана отдельная папка, если папка уже есть файлы будут помещены в неё
 #>
 param (
-    [string]$searchfolder
-    [string]$targetpath
-    [Switch]$event_req
+    [Parameter(Mandatory=$True)]
+    [string]$searchfolder, 
+    [Parameter(Mandatory=$True)]
+    [string]$targetpath,
+    [Switch]$event_req,
+    [Parameter(Mandatory=$True)]
     [int]$minsize 
 
 
