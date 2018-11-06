@@ -1,6 +1,6 @@
 <#
 
-.synopsys
+.synopsis
 sortPhotos.ps1 -searchpath C:\photos_need_to_sort\ -targetpath C:\sortedphotos\ minsize 200
 searchpath path where find photos
 targetpath path where is your photos to copy
@@ -8,9 +8,9 @@ switch -event_req will require event for every new folder to be created
 minsize -minimal size of photos to find
 del -delete photos after sorting
 
-.examples
+.example
 need to sort photos from card
-sortPhotos.ps1 -searchpath C:\photos_need_to_sort\ -targetpath C:\sortedphotos\ minsize 200
+sortPhotos.ps1 -searchpath E:\photos_need_to_sort\ -targetpath C:\sortedphotos\ minsize 200
 Скрипт автоматически сортирует фотки в соотвествии с порядком ГГГГ\ГГГГММДД событие(если есть)\*.jpg
 Сортировка фоток только если они больше 100 кб
 Дубликаты копироваться не будут. если фотки будут не дубликатами, но с одинаковым названием, будет присвоено новое имя.
