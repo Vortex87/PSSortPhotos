@@ -1,4 +1,16 @@
 <#
+
+.synopsys
+sortPhotos.ps1 -searchpath C:\photos_need_to_sort\ -targetpath C:\sortedphotos\ minsize 200
+searchpath path where find photos
+targetpath path where is your photos to copy
+switch -event_req will require event for every new folder to be created
+minsize -minimal size of photos to find
+del -delete photos after sorting
+
+.examples
+need to sort photos from card
+sortPhotos.ps1 -searchpath C:\photos_need_to_sort\ -targetpath C:\sortedphotos\ minsize 200
 Скрипт автоматически сортирует фотки в соотвествии с порядком ГГГГ\ГГГГММДД событие(если есть)\*.jpg
 Сортировка фоток только если они больше 100 кб
 Дубликаты копироваться не будут. если фотки будут не дубликатами, но с одинаковым названием, будет присвоено новое имя.
@@ -8,12 +20,13 @@
 #>
 param (
     [Parameter(Mandatory=$True)]
-    [string]$searchfolder, 
+    [string]$searchpath, 
     [Parameter(Mandatory=$True)]
     [string]$targetpath,
     [Switch]$event_req,
     [Parameter(Mandatory=$True)]
-    [int]$minsize 
+    [int]$minsize,
+    [switch]$del
 
 
 )
@@ -22,11 +35,11 @@ try {add-type -AssemblyName System.Drawing}
 catch {write-warning "System.Drawing is not installed, install .netframework 4 of higher"
 return}
 
-#$searchfolder = read-host "Укажите папку где искать фотки. Поиск будет искать все фотки в папке с файлами более 200 кб."
-if (!$searchfolder) {write-host "Необходимо указать папку где искать фотки";read-host 
+#$searchpath = read-host "Укажите папку где искать фотки. Поиск будет искать все фотки в папке с файлами более 200 кб."
+if (!$searchpath) {write-host "Необходимо указать папку где искать фотки";read-host 
 return}
 else {
-    if (!(test-path -path $searchfolder)) {write-host "Но такой папки нету...";Read-Host
+    if (!(test-path -path $searchpath)) {write-host "Но такой папки нету...";Read-Host
 return}}
  
 #$targetpath = read-host "Укажите папку куда складывать отсортированные фотки"
@@ -56,14 +69,19 @@ default{write-host "Событие запрашиваться не будет"}
 }
 #>
 
-#$item =get-item "g:\photos\testkw\20170729-_MG_0325_1.jpg"
 
-$files = Get-ChildItem -Include *.jpg -Path $searchfolder -Recurse | where {$_.Length -gt ($minsize*1kb)}
+if($minsize){
+    $files = Get-ChildItem -Include *.jpg -Path $searchpath -Recurse | where {$_.Length -gt ($minsize*1kb)}
+    }
+else    {
+    $files = Get-ChildItem -Include *.jpg -Path $searchpath -Recurse
+    }
+
 $photoscount = $files.Count
 $weight = $files | measure -Property length -Sum 
 $weight = [math]::round($weight.Sum/1Mb,2)
-write-host "всего фоток $photoscount"
-Write-Host "общий объём $weight Мб"
+write-host "TotalPhotos in source $photoscount"
+Write-Host "TotalSize $weight Mb"
 
 
 foreach ($item in $files){
@@ -77,27 +95,24 @@ $exifdate = [System.Text.Encoding]::ASCII.GetString($file.GetPropertyItem(36867)
 $filedate = [datetime]::ParseExact($exifdate,"yyyy:MM:dd HH:mm:ss`0",$null).ToString('yyyy-MM-dd')
 $file.Dispose()
 }
-catch {write-host "из exif дату получиь не удалось. будет использована дата файла " -NoNewline
+catch {write-host "no  date in exif. Filedate will be used " -NoNewline
 $filedate = $item.lastwritetime.ToString('yyyy-MM-dd') }
-finally {
-#вытащенная дата фотографии
-#Write-Host $filedate
-}
+
 # расладываем фотографию по папам.
 # сначала проверяем есть ли такая папка вообще в целевой, если есть, то будем копировать туда
 $dest = gci $targetpath -Directory -Recurse| where {$_.name.Contains($filedate)}
 $year = $filedate.remove(4)
 #если папка такая не найдена, то будем создавать новую.
 if (!$dest){
-    write-host "папки с такой датой нет, будем создавать папку"  -ForegroundColor green
+    write-host "there is no pholder for item, need to create"  -ForegroundColor green
     if ($event_req) {
-    $event = read-host "укажите название события $filedate"}
+    $event = read-host "Specify event of photo $filedate"}
     if ([string]::IsNullOrWhiteSpace($event)) {$dest = $targetpath+$year+"\"+$filedate+"\"}
     else {$dest = $targetpath+$year+"\"+$filedate +" "+ $event+ "\"}
-    write-host "Создаю папку $dest"
+    write-host "Create path $dest"
     New-Item -Path $dest -ItemType directory
     $newfoldercount++
-    write-host "копирую $item в $dest"
+    write-host "Copiing $item в $dest"
     
     Copy-Item  "$item" -Destination "$dest"
 }
@@ -111,11 +126,11 @@ else {
         #сравниваем файлы, если отличаются то будем переименовывать (сравнение будем производить по размеру файла)
         $filetest = $destpath+'\'+$item.Name
         $exsistingfile = get-item $filetest
-        if (($item.Length - $exsistingfile.Length) -eq 0) {write-host "это один и тот же файл - пропускаем"; $skipped++}
+        if (($item.Length - $exsistingfile.Length) -eq 0) {write-host "File exists - skipping."; $skipped++}
             else {
             #файлы разные необхоидмо уточнить, не коировали ли мы такой файл ранее даже с другим именем. Сравним по размеру и дате (маловероятное совпадение)
                 if((Get-ChildItem -Include *.jpg -Path $destpath -Recurse |  where {$_.length -eq $item.length} | measure).count -gt 0){
-                write-host "Найден такой же файл с другим именем в этой папке"}
+                write-host "Found same file with another name"}
                 else {
             #файлы разные будем копировать с разными именами
             $newname = $destpath+"\"+$item.name.Insert($item.name.LastIndexOfAny("."),"_"+(Get-Random -Maximum 99 -Minimum 10))
@@ -138,16 +153,14 @@ $i++
 write-host "$i из $photoscount"
 }
 
-Write-host "Фоток в источнике $i"
-Write-Host "Создано новых папок $newfoldercount                                                                                                           "
-Write-Host "Всего фоток скопировано $photoscopied"
-write-host "Фоток которые пришлось переименовать $photoslike"
-write-host "Фоток дубликатов $skipped"
-$del = read-Host "Удалить найденные фото Y/n?"
-if ($del -eq "y") {write-host "Удаляем файлы"
+Write-host "Found photos in source $i"
+Write-Host "New Folders created $newfoldercount                                                                                                           "
+Write-Host "TotalCopied $photoscopied"
+write-host "renamed $photoslike"
+write-host "Skipped $skipped"
+
+if ($del) {write-host "Removing Sorted..."
 foreach ($item in $files) {Remove-Item $item -ErrorAction SilentlyContinue
 }
-
-write-host "Отсортированные фотки удалены"
+write-host "SortedPhotos deleted"
 }
-Else {write-host "ничего не удалено"}
